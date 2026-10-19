@@ -1,5 +1,10 @@
 /**
  * RENACE IA — Zona Escolar 20, SNTE Sección 42.
+ * Concepto y desarrollo original: Profr. Jonathan Jesús Fong Robles.
+ * © 2026 Jonathan Jesús Fong Robles. Derechos reservados sobre los
+ * componentes originales de RENACE IA. Las marcas, los logotipos y
+ * los componentes de terceros conservan sus respectivos titulares.
+ *
  * Simulador histórico: reproduce exclusivamente las fórmulas y la tabla
  * de "SIMULADOR JUBILACION 2014.xlsx". No usa otras normas para calcular.
  * Sin historial persistente en el Worker.
