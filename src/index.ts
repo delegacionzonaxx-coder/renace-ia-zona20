@@ -65,7 +65,17 @@ REGLAS DOCUMENTALES:
 7. Si una situación requiere revisión oficial, sugiere acudir a la
    representación sindical o a Pensiones Civiles del Estado.
 8. No afirmes haber realizado una canalización que no exista.
-9. No emitas diagnósticos ni resoluciones jurídicas definitivas.
+- No emitas diagnósticos ni resoluciones jurídicas definitivas.
+
+ESTILO BREVE Y SIN SATURACIÓN VISUAL:
+- Responde primero lo importante, sin saludos repetidos ni introducciones largas.
+- En una conversación de trámite, formula UNA pregunta por turno.
+- Como máximo, 80 palabras por respuesta habitual; amplía solo si
+  la persona pide una explicación detallada o la seguridad lo requiere.
+- No repitas avisos de privacidad ni advertencias en cada mensaje.
+- Cuando haya fuente, menciónala al final en una línea: «Fuente: ...».
+- No listes todos los artículos o requisitos si el usuario pregunta algo puntual.
+- Distingue claramente el año estimado de cotización de una fecha de jubilación.
 `;
 
 type SearchChunk = {
@@ -146,68 +156,99 @@ function anioPrimeraCotizacion(respuestas: string[]): number | null {
 }
 
 function orientarJubilacion(mensajes: ChatMessage[]): Response {
-  const respuestas = mensajes.slice(1).map((m) => m.content);
+  const respuestas = mensajes.map((m) => m.content);
   const regimen = regimenDeclarado(respuestas);
-  const primeraCotizacion = anioPrimeraCotizacion(respuestas);
-  const pie = "\n\nLa orientación es informativa. No envíes CURP, RFC, números de empleado, talones de pago ni otros documentos personales. La antigüedad y el régimen deben verificarse ante Pensiones Civiles del Estado.";
+  const anio = anioPrimeraCotizacion(respuestas);
 
-  if (mensajes.length <= 1 || !regimen) {
+  // Una sola decisión por turno. El usuario puede escribir 1, 2 o 3.
+  if (!regimen) {
     return sseText(
-      "Para orientarte sobre tu jubilación, primero necesitamos identificar tu régimen ante Pensiones Civiles del Estado.\n\n" +
-      "¿Cuál corresponde a tu situación?\n" +
-      "1. Régimen anterior o transitorio: ya cotizaba a Pensiones Civiles antes del 1 de enero de 2014.\n" +
-      "2. Cuentas individuales: comencé a cotizar a partir del 1 de enero de 2014.\n" +
-      "3. No lo sé: necesito ayuda para identificarlo.\n\n" +
-      "Puedes contestar con el número o escribir el nombre completo. Si sabes en qué año empezaste a cotizar a Pensiones Civiles, también puedes indicarlo. " +
-      "Tu respuesta orienta la búsqueda; por sí sola no confirma el régimen." + pie,
+      "¿A qué régimen de Pensiones Civiles perteneces?\n" +
+      "1. Régimen anterior\n" +
+      "2. Cuentas individuales\n" +
+      "3. No lo sé"
     );
   }
 
+  if (anio === null) {
+    return sseText("¿En qué año empezaste a cotizar a Pensiones Civiles del Estado?");
+  }
+
+  // No se deduce el régimen jurídico definitivo únicamente por el año.
   if (regimen === "desconocido") {
-    return sseText(
-      (primeraCotizacion === null
-        ? "Te ayudo a identificarlo. ¿En qué año empezaste a cotizar por primera vez a Pensiones Civiles del Estado (no solamente a trabajar)? ¿Tienes años anteriores reconocidos o recuerdas haber cambiado de régimen? Puedes responder «No sé» si no tienes esa información."
-        : primeraCotizacion >= 2014
-          ? `Indicas que empezaste a cotizar en ${primeraCotizacion}. Eso apunta al régimen de cuentas individuales, pero debemos confirmar que no existan periodos anteriores reconocidos ni algún cambio de régimen. ¿Tienes cotizaciones a Pensiones Civiles anteriores a 2014? Si no, puedes seleccionar «2. Cuentas individuales».`
-          : `Indicas que cotizabas desde ${primeraCotizacion}, antes de 2014. Podrías estar bajo reglas transitorias, pero hay que confirmar si permaneciste en ellas o migraste a cuentas individuales. ¿Sabes si cambiaste de régimen? Puedes elegir «1. Régimen anterior» si te consta, o solicitar revisión en Pensiones Civiles.`
-      ) + pie,
-    );
-  }
+    const desdeElAnio = respuestas.findIndex((r) => {
+      const t = sinAcentos(r);
+      return /^(?:[123]\s*[,;:]\s*)?(?:19\d{2}|20\d{2})(?:\s*(?:aproximadamente|aprox\.?))?$/.test(t) ||
+        /cotiz.{0,60}\b(?:19\d{2}|20\d{2})\b/.test(t);
+    });
+    const posteriores = desdeElAnio < 0 ? [] : respuestas.slice(desdeElAnio + 1);
+    const ultima = sinAcentos(posteriores[posteriores.length - 1] || "");
 
-  if (primeraCotizacion === null) {
+    if (/^(?:no|no tengo|ninguna|nunca|no existen)(?:[.,!\s].*)?$/.test(ultima)) {
+      return sseText(
+        anio >= 2014
+          ? `Primeras cotizaciones: ${anio}. Sin aportaciones anteriores, probablemente corresponda cuentas individuales; verifica tu régimen en PCE.`
+          : `Primeras cotizaciones: ${anio}. Es posible que apliquen reglas transitorias; confirma si permaneces en el régimen anterior con PCE.`
+      );
+    }
+    if (/^(?:si|tengo|hay|migre|migr[eé])(?:[.,!\s].*)?$/.test(ultima)) {
+      return sseText(
+        "Con antecedentes o cambios de régimen, no puedo clasificarte solo por el año. Verifica tu régimen y aportaciones reconocidas en Pensiones Civiles."
+      );
+    }
     return sseText(
-      `Seleccionaste ${regimen === "transitorio" ? "régimen anterior o transitorio" : "cuentas individuales"}. ¿En qué año empezaste a COTIZAR por primera vez a Pensiones Civiles del Estado? Aclara si tienes periodos anteriores reconocidos o si cambiaste de régimen. No necesito tu fecha exacta de nacimiento todavía.` + pie,
+      "¿Tienes cotizaciones anteriores reconocidas o cambiaste de régimen? (Sí / No / No sé)"
     );
   }
 
   if (regimen === "transitorio") {
-    if (primeraCotizacion >= 2014) {
+    const posicionAnio = respuestas.map((r) => anioPrimeraCotizacion([r])).lastIndexOf(anio);
+    const despues = posicionAnio >= 0 ? respuestas.slice(posicionAnio + 1).map(sinAcentos) : [];
+    const ultima = despues[despues.length - 1] || "";
+    if (anio >= 2014) {
+      if (despues.length > 0) {
+        return sseText(
+          "No puedo confirmar el régimen anterior con esos datos. Solicita a Pensiones Civiles tu régimen y antigüedad reconocidos."
+        );
+      }
       return sseText(
-        `Elegiste el régimen anterior, pero señalas que comenzaste a cotizar en ${primeraCotizacion}. El artículo decimotercero transitorio se refiere a quienes ya cotizaban cuando entró en vigor la ley de 2014. ¿Tienes cotizaciones anteriores reconocidas por Pensiones Civiles o un documento que confirme ese régimen? No sería correcto aplicar la tabla de jubilación anterior sin comprobarlo.` + pie,
+        `Indicas ${anio}, pero elegiste régimen anterior. ¿Tienes aportaciones anteriores a 2014 reconocidas por PCE? (Sí / No / No sé)`
       );
     }
+    if (/migr|cambie|cuentas? individuales?/.test(ultima) && !/no migr|no cambie/.test(ultima)) {
+      return sseText(
+        "Si migraste a cuentas individuales, hay que aplicar sus reglas y no la tabla histórica. Confirma tu régimen en PCE."
+      );
+    }
+    if (/permane|sigo|no migr|no cambie|continuo/.test(ultima)) {
+      return sseText(
+        "Podrías conservar el régimen transitorio. Para estimar una fecha hace falta confirmar edad, años reconocidos y las reglas de la tabla histórica. Fuente: Ley de Pensiones Civiles, transitorio decimotercero."
+      );
+    }
+    if (despues.length > 0) {
+      return sseText("Para continuar es necesario confirmar ante PCE si mantuviste el régimen anterior.");
+    }
     return sseText(
-      `Si cotizabas a Pensiones Civiles desde ${primeraCotizacion}, es posible que te correspondan disposiciones transitorias. Antes de calcular, debemos comprobar que permaneces en ellas y si migraste o no al sistema de cuentas individuales.\n\n` +
-      "El artículo decimotercero transitorio contempla 30 años de servicio para Masculino y 28 para Femenino, además de edades por año de jubilación y condiciones adicionales. No basta con sumar años.\n\n" +
-      "Para continuar: ¿permaneciste en el régimen anterior? ¿Qué opción establece tu documentación para la tabla: Masculino o Femenino? ¿Cuántos años de servicio te reconoce Pensiones Civiles?" +
-      "\n\nReferencia para verificar: Ley de Pensiones Civiles del Estado de Chihuahua, artículo decimotercero transitorio." + pie,
+      `Cotizas desde ${anio}. ¿Permaneciste en el régimen anterior o migraste a cuentas individuales?`
     );
   }
 
-  // Cuentas individuales: no usar la tabla de edades transitoria ni calcular
-  // una fecha exacta sin verificar el factor legal y cotizaciones efectivas.
-  if (primeraCotizacion < 2014) {
+  if (anio < 2014) {
+    const posicionAnio = respuestas.map((r) => anioPrimeraCotizacion([r])).lastIndexOf(anio);
+    const despues = posicionAnio >= 0 ? respuestas.slice(posicionAnio + 1) : [];
+    if (despues.length > 0) {
+      return sseText("Si cotizabas antes de la reforma, debes confirmar el régimen aplicable y cualquier migración con PCE antes de estimar tu retiro.");
+    }
     return sseText(
-      `Elegiste cuentas individuales, pero señalas cotizaciones desde ${primeraCotizacion}. Eso puede ocurrir si hubo una migración, que debemos verificar. ¿Tienes confirmación de ese cambio? No aplicaré ninguna tabla hasta aclararlo.` + pie,
+      `Cotizabas desde ${anio}, pero elegiste cuentas individuales. ¿Migraste desde el régimen anterior? (Sí / No / No sé)`
     );
   }
-  const anio35 = primeraCotizacion + 35;
+
+  const anio35 = anio + 35;
   return sseText(
-    `Conforme a los datos que proporcionas, comenzaste a cotizar a Pensiones Civiles en ${primeraCotizacion} y seleccionaste el régimen de cuentas individuales, pendiente de confirmación oficial.\n\n` +
-    `Si las cotizaciones han sido ininterrumpidas y se reconocen desde ese año, 35 años de cotización se completarían aproximadamente en ${anio35}. Esto NO significa que tu fecha de jubilación sea ${anio35}.\n\n` +
-    "De acuerdo con la versión consultada de la Ley de Pensiones Civiles, el artículo 33 contempla 35 años de cotización y la edad correspondiente al factor 85; el artículo 35 regula otra modalidad por antigüedad, con requisitos diferentes. La tabla del simulador histórico de 2014 NO se aplica automáticamente a cuentas individuales.\n\n" +
-    "Para continuar necesito confirmar: ¿has cotizado sin interrupciones desde ese año? ¿Tienes periodos de cotización anteriores reconocidos? Con esa información podremos explicar qué requisitos faltan, pero no prometer una fecha exacta sin validar el factor legal.\n\n" +
-    "Referencia para verificar: Ley de Pensiones Civiles del Estado de Chihuahua, artículos 5, 33 y 35." + pie,
+    `Si cotizas continuamente desde ${anio}, completarías 35 años aproximadamente en ${anio35}.\n` +
+    "Ese año no es una fecha de jubilación: faltan comprobar edad, régimen y aportaciones reconocidas.\n" +
+    "Fuente: Ley de Pensiones Civiles, art. 33 (versión documental disponible)."
   );
 }
 
@@ -326,6 +367,9 @@ RESPUESTA:
 - No ejecutes mentalmente ni inventes fórmulas del Excel; una fecha concreta
   debe apoyarse en una regla matemática comprobada y el régimen aplicable.
 - Ante documentos contradictorios o incompletos, explica qué falta confirmar.
+- Responde de forma breve y directa: por defecto 80 palabras como máximo.
+- Evita avisos repetitivos y fórmulas de saludo. Una pregunta a la vez.
+- Si usas documentos, coloca la fuente al final, en una sola línea.
 `;
 
     const messages: ChatMessage[] = [
@@ -335,7 +379,7 @@ RESPUESTA:
 
     const inputs = {
       messages,
-      max_tokens: 1024,
+      max_tokens: 450,
       stream: true,
     } satisfies AiTextGenerationInput & { stream: true };
 
