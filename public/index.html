@@ -5,185 +5,397 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
     <meta name="referrer" content="no-referrer" />
-    <title>RENACE IA | Zona Escolar 20 · SNTE Sección 42</title>
+    <meta name="description" content="RENACE IA: orientación sindical documental para la Zona Escolar 20 del SNTE Sección 42." />
+    <title>RENACE IA | Presencia y respaldo · Zona Escolar 20</title>
     <style>
       :root {
-        --brand: #942d4b;
-        --brand-dark: #752038;
-        --ink: #202630;
-        --muted: #657181;
-        --border: #dfe3e8;
-        --surface: #ffffff;
-        --canvas: #f7f8fa;
-        --user-bg: #fbeaf0;
-        --assistant-bg: #ffffff;
-        --focus: #2d6fbd;
+        --naranja: #ff7900;
+        --naranja-intenso: #ee6200;
+        --naranja-oscuro: #b94e00;
+        --amarillo: #ffb32d;
+        --crema: #fff7eb;
+        --blanco: #ffffff;
+        --fondo: #fcfaf7;
+        --tinta: #232323;
+        --gris: #61666e;
+        --borde: #e9e5df;
+        --foco: #175caa;
       }
-
       * { box-sizing: border-box; }
-      html { height: 100%; }
+      [hidden] { display: none !important; }
+      html { min-height: 100%; }
       body {
         margin: 0;
         min-height: 100vh;
-        padding: 18px;
-        background: var(--canvas);
-        color: var(--ink);
-        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        padding: 20px 18px 26px;
+        background:
+          radial-gradient(ellipse at 95% 0%, rgba(255, 174, 59, .13), transparent 42%),
+          linear-gradient(180deg, #ffffff 0%, var(--fondo) 100%);
+        color: var(--tinta);
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
       }
-      .app { width: min(100%, 940px); margin: 0 auto; }
-      .topbar {
+      button, textarea { font: inherit; }
+      button { cursor: pointer; }
+      button:disabled { cursor: not-allowed; opacity: .55; }
+      button:focus-visible, textarea:focus-visible {
+        outline: 3px solid var(--foco);
+        outline-offset: 3px;
+      }
+      .app { width: min(100%, 1060px); margin: 0 auto; }
+      .institutional-strip {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 16px;
-        margin-bottom: 14px;
+        gap: 12px;
+        padding: 0 3px 11px;
+        font-size: .73rem;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: #505050;
       }
-      .identity { min-width: 0; }
-      .brand { margin: 0; font-size: 1.85rem; line-height: 1.15; color: var(--brand); letter-spacing: -.025em; }
-      .brand span { color: var(--ink); }
-      .subtitle { margin: 5px 0 0; color: var(--muted); font-size: .91rem; }
-      button { font: inherit; }
+      .institutional-strip span:first-child {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .institutional-strip span:first-child::before {
+        content: "";
+        width: 9px;
+        height: 9px;
+        background: var(--naranja);
+        border-radius: 50%;
+      }
+      .banner {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgba(255, 129, 4, .22);
+        border-radius: 20px;
+        background: linear-gradient(120deg, #ff8300, #fff8ed 48%, #ff9f19);
+        box-shadow: 0 12px 32px rgba(107, 60, 6, .075);
+      }
+      .banner img {
+        display: block;
+        width: 100%;
+        height: auto;
+        max-height: 263px;
+        object-fit: contain;
+      }
+      .intro {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 20px 4px 19px;
+      }
+      .intro-title {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 11px;
+      }
+      .intro h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+        line-height: 1.12;
+        letter-spacing: -.04em;
+        font-weight: 850;
+      }
+      .intro h1 span { color: var(--naranja-intenso); }
+      .intro .label {
+        display: inline-flex;
+        border-radius: 100px;
+        padding: 4px 10px;
+        background: #fff0d8;
+        color: #9d4608;
+        font-size: .7rem;
+        font-weight: 800;
+        letter-spacing: .065em;
+        text-transform: uppercase;
+      }
+      .intro p { margin: 7px 0 0; font-size: .94rem; color: var(--gris); }
       .new-chat {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
         flex-shrink: 0;
-        padding: 10px 14px;
-        border: 1px solid var(--brand);
-        border-radius: 10px;
-        background: var(--surface);
-        color: var(--brand);
-        font-weight: 650;
-        cursor: pointer;
+        padding: 12px 17px;
+        border: 1.5px solid var(--naranja-intenso);
+        border-radius: 11px;
+        background: #fff;
+        color: #a54600;
+        font-weight: 750;
+        transition: background .18s, transform .18s;
       }
-      .new-chat:hover { background: #fff2f6; }
-      .new-chat:focus-visible, #send-button:focus-visible, #user-input:focus-visible {
-        outline: 3px solid var(--focus);
-        outline-offset: 2px;
-      }
+      .new-chat:hover { background: #fff0dc; transform: translateY(-1px); }
+      .new-chat .plus { font-size: 1.35rem; line-height: .7; font-weight: 500; }
       .chat-container {
         display: flex;
         flex-direction: column;
-        height: min(76vh, 760px);
-        min-height: 460px;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        background: var(--surface);
+        height: min(64vh, 665px);
+        min-height: 465px;
         overflow: hidden;
-        box-shadow: 0 8px 30px rgba(24, 38, 56, .05);
+        background: var(--blanco);
+        border: 1px solid #e8dfd2;
+        border-radius: 21px;
+        box-shadow: 0 18px 38px rgba(60, 45, 26, .08);
       }
+      .chat-bar {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        flex-shrink: 0;
+        padding: 13px 18px;
+        border-bottom: 1px solid var(--borde);
+        background: linear-gradient(90deg, #fff8ed, #ffffff 66%);
+      }
+      .assistant-mark {
+        display: grid;
+        place-items: center;
+        width: 37px;
+        height: 37px;
+        border-radius: 11px;
+        background: linear-gradient(145deg, #ffab26, #f46800);
+        color: #ffffff;
+        font-size: 1.08rem;
+        font-weight: 850;
+        box-shadow: 0 3px 9px rgba(243, 104, 0, .22);
+      }
+      .chat-bar h2 { margin: 0; font-size: .91rem; line-height: 1.2; }
+      .chat-bar p { margin: 3px 0 0; color: var(--gris); font-size: .75rem; }
       .chat-messages {
         flex: 1;
         min-height: 0;
-        padding: 22px;
         overflow-y: auto;
-        background: var(--canvas);
+        padding: 22px 24px;
+        background:
+          radial-gradient(circle at 100% 0%, #fff0d950, transparent 34%),
+          #fcfbf9;
       }
       .message {
         width: fit-content;
-        max-width: 88%;
-        margin-bottom: 14px;
-        padding: 12px 15px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
+        max-width: 89%;
+        margin-bottom: 17px;
+        padding: 12px 16px 14px;
+        border: 1px solid var(--borde);
+        border-radius: 15px;
         overflow-wrap: anywhere;
+        font-size: .92rem;
+        box-shadow: 0 2px 10px rgba(27, 31, 36, .025);
+      }
+      .message::before {
+        display: block;
+        margin-bottom: 6px;
+        font-size: .68rem;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
       }
       .message p { margin: 0; white-space: pre-wrap; }
-      .assistant-message { background: var(--assistant-bg); margin-right: auto; }
-      .user-message {
-        background: var(--user-bg);
-        border-color: #efd0dc;
-        margin-left: auto;
+      .assistant-message {
+        margin-right: auto;
+        border-left: 4px solid var(--naranja);
+        background: #fff;
       }
+      .assistant-message::before { content: "RENACE IA"; color: #c65a00; }
+      .user-message {
+        margin-left: auto;
+        border-color: #f1cc97;
+        background: #fff1db;
+      }
+      .user-message::before { content: "Tu consulta"; color: #986026; }
+      .quick-prompts {
+        flex-shrink: 0;
+        padding: 12px 18px 14px;
+        border-top: 1px solid #f3eee7;
+        background: #fffdf9;
+      }
+      .quick-prompts h3 { margin: 0 0 9px; font-size: .75rem; color: var(--gris); font-weight: 700; }
+      .prompt-list { display: flex; flex-wrap: wrap; gap: 8px; }
+      .prompt-chip {
+        padding: 7px 11px;
+        border: 1px solid #f1cf9f;
+        border-radius: 99px;
+        background: #fff;
+        color: #a45109;
+        font-size: .76rem;
+        font-weight: 690;
+        transition: background .15s;
+      }
+      .prompt-chip:hover { background: #fff0d6; }
       .typing-indicator {
         display: none;
-        padding: 9px 18px;
-        background: #fff;
-        color: var(--muted);
-        font-size: .89rem;
+        flex-shrink: 0;
+        padding: 7px 19px;
+        background: #fff8eb;
+        color: #8f520e;
+        font-size: .79rem;
       }
       .typing-indicator.visible { display: block; }
       .message-input {
         display: flex;
-        align-items: end;
-        gap: 10px;
-        padding: 13px;
-        border-top: 1px solid var(--border);
-        background: var(--surface);
+        align-items: flex-end;
+        gap: 11px;
+        flex-shrink: 0;
+        padding: 14px;
+        border-top: 1px solid var(--borde);
+        background: #fff;
       }
       #user-input {
         flex: 1;
         min-width: 0;
-        min-height: 48px;
+        min-height: 49px;
         max-height: 170px;
         resize: none;
-        padding: 12px;
-        border: 1px solid #c8ced7;
-        border-radius: 10px;
-        font: inherit;
-        color: var(--ink);
+        padding: 12px 13px;
+        border: 1px solid #d3d2d0;
+        border-radius: 11px;
+        background: #fff;
+        color: var(--tinta);
+        line-height: 1.5;
+        outline: none;
       }
+      #user-input:focus { border-color: var(--naranja); box-shadow: 0 0 0 3px rgba(255, 121, 0, .14); }
+      #user-input::placeholder { color: #86817b; }
       #send-button {
-        min-height: 48px;
-        padding: 0 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 49px;
+        padding: 0 20px;
         border: 0;
-        border-radius: 10px;
-        background: var(--brand);
-        color: #fff;
+        border-radius: 11px;
+        background: linear-gradient(145deg, #ff9400, #eb6200);
+        color: white;
+        font-weight: 780;
+        box-shadow: 0 5px 13px rgba(240, 100, 0, .18);
+      }
+      #send-button:hover:not(:disabled) { background: linear-gradient(145deg, #fa8400, #d95200); }
+      .disclaimer {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4px;
+        margin: 13px 2px 0;
+        padding: 12px 15px;
+        border-left: 3px solid var(--naranja);
+        border-radius: 0 9px 9px 0;
+        background: #fff7e9;
+        color: #5b554e;
+        font-size: .78rem;
+      }
+      .disclaimer strong { color: #80500a; }
+      .footer {
+        padding: 19px 0 0;
+        text-align: center;
+        color: #737373;
+        font-size: .72rem;
+      }
+      .footer .credit {
+        display: block;
+        margin-top: 7px;
+        color: #53473b;
+        font-size: .78rem;
         font-weight: 650;
-        cursor: pointer;
       }
-      #send-button:hover { background: var(--brand-dark); }
-      #send-button:disabled { opacity: .55; cursor: not-allowed; }
-      .privacy {
-        margin: 12px 2px 0;
-        color: var(--muted);
-        font-size: .8rem;
+      @media (max-width: 620px) {
+        body { padding: 11px 10px 22px; }
+        .institutional-strip { font-size: .57rem; letter-spacing: .05em; }
+        .banner { border-radius: 12px; }
+        .banner img { max-height: none; }
+        .intro { align-items: flex-start; padding: 17px 2px 15px; }
+        .intro h1 { font-size: 1.68rem; }
+        .intro .label { font-size: .59rem; }
+        .intro p { font-size: .79rem; }
+        .intro-title { gap: 7px; }
+        .new-chat { padding: 9px 10px; font-size: .76rem; }
+        .new-chat .plus { display: none; }
+        .chat-container { height: max(450px, calc(100dvh - 340px)); min-height: 450px; border-radius: 14px; }
+        .chat-messages { padding: 14px 12px; }
+        .message { max-width: 96%; font-size: .88rem; }
+        .quick-prompts { padding: 11px 12px; }
+        .prompt-list { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
+        .prompt-chip { flex: 0 0 auto; }
+        .message-input { padding: 10px; gap: 8px; }
+        #send-button { padding: 0 13px; }
       }
-      .privacy strong { color: var(--ink); }
-      @media (max-width: 600px) {
-        body { padding: 10px; }
-        .brand { font-size: 1.5rem; }
-        .subtitle { font-size: .78rem; }
-        .new-chat { font-size: .82rem; padding: 9px; }
-        .chat-container { height: calc(100dvh - 160px); min-height: 360px; }
-        .chat-messages { padding: 12px; }
-        .message { max-width: 96%; }
-        .message-input { padding: 9px; }
-        #send-button { padding: 0 12px; }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
       }
     </style>
   </head>
   <body>
     <main class="app">
-      <header class="topbar">
-        <div class="identity">
-          <h1 class="brand">RENACE <span>IA</span></h1>
-          <p class="subtitle">Orientación sindical · Zona Escolar 20 · SNTE Sección 42</p>
+      <div class="institutional-strip" aria-label="Identificación del proyecto">
+        <span>SNTE · Sección 42</span>
+        <span>Zona Escolar 20</span>
+      </div>
+
+      <div class="banner">
+        <img
+          src="renace-banner.webp"
+          alt="SNTE Sección 42 y RENACE: Presencia y Respaldo. Zona Escolar 20. Unidos, informados y respaldados."
+          width="2033"
+          height="774"
+        />
+      </div>
+
+      <header class="intro">
+        <div>
+          <div class="intro-title">
+            <h1>RENACE <span>IA</span></h1>
+            <span class="label">Orientación sindical digital</span>
+          </div>
+          <p>Información clara para una comunidad docente informada y respaldada.</p>
         </div>
-        <button id="new-chat-button" class="new-chat" type="button">Nueva consulta</button>
+        <button type="button" id="new-chat-button" class="new-chat">
+          <span class="plus" aria-hidden="true">+</span>Nueva consulta
+        </button>
       </header>
 
-      <section class="chat-container" aria-label="Asistente de orientación sindical">
+      <section class="chat-container" aria-label="Consulta de RENACE IA">
+        <div class="chat-bar">
+          <div class="assistant-mark" aria-hidden="true">R</div>
+          <div>
+            <h2>Tu asistente RENACE IA</h2>
+            <p>Derechos · Prestaciones · Licencias · Pensiones Civiles</p>
+          </div>
+        </div>
+
         <div id="chat-messages" class="chat-messages" role="log" aria-label="Mensajes de la consulta" aria-live="polite" aria-relevant="additions text"></div>
-        <div class="typing-indicator" id="typing-indicator" role="status">RENACE IA está preparando su respuesta…</div>
+
+        <div id="quick-prompts" class="quick-prompts">
+          <h3>¿Sobre qué necesitas orientación?</h3>
+          <div class="prompt-list">
+            <button type="button" class="prompt-chip" data-question="¿Qué derechos laborales puedo consultar en los documentos disponibles?">Derechos laborales</button>
+            <button type="button" class="prompt-chip" data-question="¿Qué prestaciones sindicales se explican en los documentos disponibles?">Prestaciones</button>
+            <button type="button" class="prompt-chip" data-question="¿Qué documentos disponibles explican los permisos y las licencias?">Licencias y permisos</button>
+            <button type="button" class="prompt-chip" data-question="¿Qué requisitos se indican para solicitar ayuda por gastos funerarios ante Pensiones Civiles del Estado?">Pensiones Civiles</button>
+          </div>
+        </div>
+
+        <div class="typing-indicator" id="typing-indicator" role="status">RENACE IA está consultando la información disponible…</div>
+
         <div class="message-input">
           <textarea
             id="user-input"
-            aria-label="Escribe tu consulta"
-            placeholder="Escribe tu duda sobre prestaciones, derechos, licencias…"
+            aria-label="Escribe tu consulta sindical"
+            placeholder="Escribe tu pregunta aquí…"
             rows="1"
             maxlength="3000"
             autocomplete="off"
             spellcheck="true"
           ></textarea>
-          <button id="send-button" type="button">Enviar</button>
+          <button id="send-button" type="button">Enviar <span aria-hidden="true">➜</span></button>
         </div>
       </section>
 
-      <p class="privacy">
-        <strong>Privacidad:</strong> esta página no guarda un historial permanente en tu navegador.
-        Al iniciar una nueva consulta o recargar, los mensajes desaparecen de la pantalla.
-        Evita incluir CURP, RFC, datos médicos u otra información sensible.
-        El servicio puede estar sujeto a retención técnica de sus proveedores.
-      </p>
+      <aside class="disclaimer" aria-label="Información y privacidad">
+        <p><strong>Orientación:</strong> RENACE IA ofrece información documental de carácter orientativo; no sustituye la atención de los representantes sindicales ni de las autoridades competentes.</p>
+        <p><strong>Privacidad:</strong> la página no guarda un historial permanente en tu navegador. Al recargar o iniciar una nueva consulta, los mensajes se eliminan de la pantalla. Evita compartir CURP, RFC, contraseñas, expedientes médicos u otros datos sensibles. Los proveedores pueden conservar información técnica según sus políticas.</p>
+      </aside>
+      <footer class="footer">RENACE · Zona Escolar 20 · SNTE Sección 42 · Presencia y respaldo<span class="credit">Creado por el Profr. Jonathan Fong</span></footer>
     </main>
     <script src="chat.js" defer></script>
   </body>
