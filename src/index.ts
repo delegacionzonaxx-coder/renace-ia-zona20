@@ -1,6 +1,6 @@
 /**
  * RENACE IA — Zona Escolar 20, SNTE Sección 42.
- * Flujo directo de jubilación: régimen → edad y servicio → hombre o mujer.
+ * Flujo: régimen → edad y servicio → hombre o mujer → datos exactos del Excel.
  * El Worker no almacena historiales de consultas en una base de datos.
  */
 import { Env, ChatMessage } from "./types";
@@ -25,6 +25,8 @@ Chihuahua, México. Atiendes consultas de docentes de la Zona Escolar 20.
   Nunca prometas una fecha oficial ni inventes fórmulas del Excel.
 - El simulador de jubilación 2014 es histórico: AI Search lee fragmentos,
   pero no ejecuta las fórmulas originales de la hoja de cálculo.
+  El cálculo del régimen anterior se realiza mediante una función
+  programada y probada contra los datos del simulador.
 - No apliques automáticamente tablas del régimen anterior a cuentas
   individuales, ni confundas servicio con cotizaciones reconocidas.
 - No solicites CURP, RFC, números de empleado, contraseñas ni expedientes.
@@ -113,6 +115,99 @@ function obtenerCategoria(texto: string): Categoria | null {
   return null;
 }
 
+/**
+ * Entrada exacta de la hoja histórica: B4 (edad al 31/12/2014),
+ * B5 (año de ingreso), B6 (Masculino/Femenino).
+ * Aceptamos "1997 y 39" o "Ingreso: 1997. Edad en 2014: 39".
+ */
+type DatosExcel = { ingreso: number; edad2014: number };
+function obtenerDatosExcel(texto: string): DatosExcel | null {
+  const t = normalizar(texto);
+  // No confundir el año de referencia 2014 con el año de ingreso.
+  const ingresoExplicito = t.match(/(?:ingres[eo]|entrada|comenc[eé]|empec[eé])(?:\s+(?:a\s+trabajar|al\s+servicio|en))?\s*[:=]?\s*(19\d{2}|20\d{2})\b/);
+  const edadExplicita = t.match(/(?:edad(?:\s+al)?\s+(?:31\s+de\s+diciembre\s+de\s+)?2014|edad\s+en\s+2014|tenia)\s*[:=]?\s*(\d{1,2})\b/);
+  let ingreso = ingresoExplicito ? Number(ingresoExplicito[1]) : null;
+  let edad2014 = edadExplicita ? Number(edadExplicita[1]) : null;
+  if (ingreso === null || edad2014 === null) {
+    const limpio = t.replace(/\b(?:al|31|de|diciembre|del|2014|edad|ingreso|en|tenia|anos|ano|servicio|y|hombre|mujer)\b/g, " ");
+    const vals = [...limpio.matchAll(/\b(?:19\d{2}|20\d{2}|\d{1,2})\b/g)].map(m => Number(m[0]));
+    const anios = vals.filter(n => n >= 1950 && n <= new Date().getFullYear());
+    const edades = vals.filter(n => n >= 18 && n <= 90);
+    if (ingreso === null && anios.length === 1) ingreso = anios[0];
+    if (edad2014 === null && edades.length === 1) edad2014 = edades[0];
+  }
+  if (ingreso === null || edad2014 === null) return null;
+  if (ingreso < 1950 || ingreso > new Date().getFullYear() || edad2014 < 18 || edad2014 > 90) return null;
+  return { ingreso, edad2014 };
+}
+
+/** Tabla H:I (Femenino) y K:L (Masculino) del Excel,
+ * contrastada con el artículo 13 transitorio compartido por el usuario.
+ * 2014-2020 aparece como N/A en el artículo, sin edad en esta tabla.
+ * Para 2030 en adelante se mantiene el último tramo de la norma,
+ * aunque la hoja original solo enumere hasta 2043.
+ */
+function edadExigida(anio: number, categoria: Categoria): number | null {
+  if (anio < 2014) return null;
+  if (anio <= 2020) return null;
+  if (anio <= 2023) return categoria === "hombre" ? 53 : 51;
+  if (anio <= 2026) return categoria === "hombre" ? 54 : 52;
+  if (anio <= 2029) return categoria === "hombre" ? 55 : 53;
+  return categoria === "hombre" ? 56 : 54;
+}
+
+type Simulacion = {
+  base: number; edadBase: number; requeridaBase: number | null;
+  diferenciaInicial: number; leyendaExcel: string;
+  anioRevisado: number | null; edadRevisada: number | null;
+  requeridaRevisada: number | null; adicionalRevisado: number | null;
+  superaLimiteTabla: boolean;
+};
+
+/** Traducción reproducible de B8, B9 corregida, B11, B12 y B13.
+ * B8: IF(B6="M",B5+30,B5+28).
+ * B9 tiene un ERROR en el XLSX guardado: usa (B8-2014)+E35 (E35 vacía).
+ * Se emplea B4, que es la edad introducida al 31/12/2014:
+ * B9 = (B8-2014)+B4, coincidiendo con las capturas proporcionadas.
+ * B11: VLOOKUP para edad exigida según año/sexo.
+ * B12: B11 - B9.
+ * B13: da "APORTA TRES AÑOS" para cualquier diferencia >=3.
+ * ADEMÁS se revisa la edad requerida año a año después del año base:
+ * la tabla legal puede cambiar en ese intervalo.
+ */
+function simularExcelHistorico(ingreso: number, edad2014: number, categoria: Categoria): Simulacion | null {
+  const anosServicio = categoria === "hombre" ? 30 : 28;
+  const limiteTabla = categoria === "hombre" ? 33 : 31;
+  const base = ingreso + anosServicio;
+  if (base < 2014 || base > 2100) return null;
+  const edadBase = edad2014 + (base - 2014);
+  const requeridaBase = edadExigida(base, categoria);
+  const diferenciaInicial = requeridaBase === null ? 0 : Math.max(0, requeridaBase - edadBase);
+  const leyendaExcel = diferenciaInicial === 0 ? "NO APORTA" :
+    diferenciaInicial === 1 ? "APORTA UN AÑO" :
+    diferenciaInicial === 2 ? "APORTA DOS AÑOS" : "APORTA TRES AÑOS";
+
+  for (let anio = base; anio <= 2100; anio++) {
+    const edad = edad2014 + (anio - 2014);
+    const requerida = edadExigida(anio, categoria);
+    const servicioEnAnio = anio - ingreso;
+    // El transitorio restringe la aplicación de la tabla a 33/31 años.
+    // Si ya se rebasó ese límite SIN alcanzar la edad, no deducir
+    // automáticamente jubilación: requiere otra interpretación legal.
+    if (servicioEnAnio > limiteTabla && requerida !== null && edad < requerida) {
+      return { base, edadBase, requeridaBase, diferenciaInicial, leyendaExcel,
+        anioRevisado:null, edadRevisada:null, requeridaRevisada:null,
+        adicionalRevisado:null, superaLimiteTabla:true };
+    }
+    if (requerida === null || edad >= requerida) {
+      return { base, edadBase, requeridaBase, diferenciaInicial, leyendaExcel,
+        anioRevisado:anio, edadRevisada:edad, requeridaRevisada:requerida,
+        adicionalRevisado:anio-base, superaLimiteTabla:servicioEnAnio>limiteTabla };
+    }
+  }
+  return null;
+}
+
 function esTemaDeJubilacion(texto: string): boolean {
   return /jubil|pensionar(?:me|se)?|pensi[oó]n por (?:antig[uü]edad|jubilaci[oó]n)|simulador\s+(?:de\s+)?retiro|tiempo\s+para\s+retirarme/i.test(texto);
 }
@@ -152,25 +247,61 @@ function flujoJubilacion(preguntas: string[]): Response {
   }
   const categoria = obtenerCategoria(despuesDeDatos[indiceCategoria])!;
 
-  // Nunca interpretar el resultado de una celda del Excel como fecha propia.
-  // Solo se calcula el faltante aritmético de años para un requisito de servicio.
   if (regimen === "anterior") {
-    const meta = categoria === "hombre" ? 30 : 28;
-    const faltantes = Math.max(0, meta - datos.servicio);
-    const linea = faltantes > 0
-      ? `Te faltan ${faltantes} años de servicio para sumar ${meta}.`
-      : `Ya sumas ${meta} o más años de servicio.`;
+    // Los datos "edad actual + años de servicio" no bastan para reconstruir
+    // sin ambigüedad año de ingreso ni edad EXACTA al 31/12/2014.
+    const despuesCategoria = despuesDeDatos.slice(indiceCategoria + 1);
+    const excel = despuesCategoria.map(obtenerDatosExcel).find((d) => d !== null) ?? null;
+    if (!excel) {
+      return responderBreve(
+        "Para aplicar exactamente el simulador de Excel: " +
+        "¿en qué año ingresaste y qué edad tenías al 31 de diciembre de 2014? " +
+        "(Ejemplo: 1997 y 39).",
+      );
+    }
+    if (excel.ingreso >= 2014) {
+      return responderBreve(
+        "El simulador corresponde al régimen anterior. " +
+        "Confirma si tu año de ingreso es correcto: " + excel.ingreso + ".",
+      );
+    }
+    const calc = simularExcelHistorico(excel.ingreso, excel.edad2014, categoria);
+    if (!calc) {
+      return responderBreve("No hay datos suficientes en el simulador histórico para calcular ese caso.");
+    }
+    const req = calc.requeridaBase === null ? "N/A" : String(calc.requeridaBase);
+    const inicial = calc.diferenciaInicial > 3
+      ? `La fórmula marca «APORTA TRES AÑOS» pero la diferencia inicial real es ${calc.diferenciaInicial}.`
+      : `El Excel indica: ${calc.leyendaExcel.toLowerCase()}.`;
+    if (calc.anioRevisado === null) {
+      return responderBreve(
+        `Año base: ${calc.base}. Edad: ${calc.edadBase}; requerida: ${req}.\n` +
+        `${inicial} Al superar el límite de años de servicio previsto por el transitorio, ` +
+        "se necesita revisión oficial para determinar la fecha.",
+      );
+    }
+    const cambio = calc.anioRevisado !== calc.base + calc.diferenciaInicial;
+    const hoy = new Date().getFullYear();
+    const restante = Math.max(0, calc.anioRevisado-hoy);
     return responderBreve(
-      `${linea}\nEsto no confirma una fecha de jubilación: también debe verificarse la edad exigida y el régimen reconocido.\nFuente: Ley de Pensiones Civiles, transitorio decimotercero.`,
+      `Año base: ${calc.base}. Edad: ${calc.edadBase}; requerida: ${req}.\n` +
+      `${inicial}\n` +
+      `Revisando la tabla año por año: ${calc.anioRevisado} ` +
+      `(edad ${calc.edadRevisada}; requerida ${calc.requeridaRevisada ?? "N/A"}). ` +
+      (cambio ? "La edad exigida cambió durante la espera. " : "") +
+      `Desde ${hoy}, faltan aproximadamente ${restante} años calendario. ` +
+      "Estimación sujeta a antigüedad y aportaciones reconocidas.",
     );
   }
 
+  // Cuentas individuales: la tabla del Excel histórico NO es aplicable.
   const faltantes = Math.max(0, 35 - datos.servicio);
   const linea = faltantes > 0
-    ? `Te faltarían ${faltantes} años para sumar 35 de cotización, si tus ${datos.servicio} años de servicio están reconocidos como cotizados.`
-    : `Ya indicas ${datos.servicio} años de servicio; confirma cuántos son cotizaciones reconocidas.`;
+    ? `Para completar 35 años de cotización te faltarían ${faltantes}, si todos los años de servicio están reconocidos.`
+    : "Ya indicas 35 o más años de servicio; verifica cuántos están cotizados.";
   return responderBreve(
-    `${linea}\nEsto no es una fecha de jubilación; también existe un requisito de edad y otras modalidades.\nFuente: Ley de Pensiones Civiles, artículo 33.`,
+    `${linea} También debes cumplir la condición de edad correspondiente. ` +
+    "No se utiliza la tabla del simulador histórico. Fuente: Ley de Pensiones Civiles, art. 33.",
   );
 }
 
