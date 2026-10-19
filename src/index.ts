@@ -20,10 +20,16 @@ IDENTIDAD:
 
 ATENCIÓN PERSONALIZADA PERMITIDA:
 - SÍ puedes orientar a una persona sobre SU posible fecha de jubilación.
-- SÍ puedes solicitar los datos no sensibles indispensables para una
-  simulación: año de ingreso al servicio, edad al 31 de diciembre de 2014
-  y la categoría Masculino o Femenino utilizada por el simulador
-  histórico, si corresponde.
+- Antes de cualquier estimación de jubilación, identifica si aplica el
+  régimen transitorio de quienes cotizaban al entrar en vigor la ley de 2014,
+  el sistema de cuentas individuales o si aún no está determinado.
+- Ofrece siempre una tercera opción: «No lo sé».
+- El año de ingreso al servicio no prueba por sí solo el régimen: verifica
+  desde cuándo cotiza a PCE, periodos anteriores reconocidos y migración.
+- Solo si corresponde al régimen transitorio solicita la categoría
+  Masculino o Femenino utilizada por su tabla histórica.
+- No uses la tabla del simulador histórico de 2014 para determinar la
+  jubilación de una persona de cuentas individuales.
 - Cuando preguntes por esa categoría, escribe SIEMPRE las opciones
   completas: «Masculino» y «Femenino». Nunca preguntes solo «M o F».
 - Internamente, el simulador histórico utiliza M para Masculino y F
@@ -88,6 +94,123 @@ function sseText(text: string): Response {
   });
 }
 
+
+/** Detección de consultas que abandonan el tema de jubilación. */
+function otraConsultaNoRelacionada(text: string): boolean {
+  return /gastos? funerarios?|seguro de vida|licencias?|permisos? laborales?|pr[eé]stamos?|vacaciones|incapacidades|aguinaldo/i.test(text)
+    && !/jubil|pensi[oó]n por|retirar(me)?/i.test(text);
+}
+
+type Regimen = "transitorio" | "individual" | "desconocido";
+
+function sinAcentos(t: string): string {
+  return t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+/**
+ * Identifica solo elecciones que la persona haya expresado.
+ * Nunca decide el régimen legal definitivo por el texto de una pregunta.
+ */
+function regimenDeclarado(respuestas: string[]): Regimen | null {
+  for (const original of [...respuestas].reverse()) {
+    const t = sinAcentos(original);
+    if (/^(?:3|no lo se|no se|desconozco|no estoy segur[oa])(?:[.)\s!?,;:].*)?$/.test(t)) {
+      return "desconocido";
+    }
+    if (/cuentas? individuales?|regimen nuevo|nueva ley|nuevo sistema/.test(t)
+        || /^2(?:[.)\s,;:].*)?$/.test(t)) {
+      return "individual";
+    }
+    if (/regimen anterior|ley anterior|transitorio|sistema anterior/.test(t)
+        || /^1(?:[.)\s,;:].*)?$/.test(t)) {
+      return "transitorio";
+    }
+  }
+  return null;
+}
+
+/** Busca el año afirmado por la persona, sin confundirlo con "simulador 2014". */
+function anioPrimeraCotizacion(respuestas: string[]): number | null {
+  for (const original of [...respuestas].reverse()) {
+    const t = sinAcentos(original);
+    const cotizar = t.match(/(?:cotiz(?:ar|ando|e|o|aba|acion)?|primeras? aportaciones?).{0,65}?\b(19\d{2}|20\d{2})\b/);
+    const simple = t.match(/^(?:[123]\s*[,;:]\s*)?(19\d{2}|20\d{2})(?:\s*(?:aproximadamente|aprox\.?))?$/);
+    const afterOption = t.match(/^[123]\s*[,;:.\-]\s*(19\d{2}|20\d{2})\b/);
+    const m = cotizar || simple || afterOption;
+    if (m) {
+      const n = Number(m[1]);
+      if (n >= 1950 && n <= new Date().getFullYear()) return n;
+    }
+  }
+  return null;
+}
+
+function orientarJubilacion(mensajes: ChatMessage[]): Response {
+  const respuestas = mensajes.slice(1).map((m) => m.content);
+  const regimen = regimenDeclarado(respuestas);
+  const primeraCotizacion = anioPrimeraCotizacion(respuestas);
+  const pie = "\n\nLa orientación es informativa. No envíes CURP, RFC, números de empleado, talones de pago ni otros documentos personales. La antigüedad y el régimen deben verificarse ante Pensiones Civiles del Estado.";
+
+  if (mensajes.length <= 1 || !regimen) {
+    return sseText(
+      "Para orientarte sobre tu jubilación, primero necesitamos identificar tu régimen ante Pensiones Civiles del Estado.\n\n" +
+      "¿Cuál corresponde a tu situación?\n" +
+      "1. Régimen anterior o transitorio: ya cotizaba a Pensiones Civiles antes del 1 de enero de 2014.\n" +
+      "2. Cuentas individuales: comencé a cotizar a partir del 1 de enero de 2014.\n" +
+      "3. No lo sé: necesito ayuda para identificarlo.\n\n" +
+      "Puedes contestar con el número o escribir el nombre completo. Si sabes en qué año empezaste a cotizar a Pensiones Civiles, también puedes indicarlo. " +
+      "Tu respuesta orienta la búsqueda; por sí sola no confirma el régimen." + pie,
+    );
+  }
+
+  if (regimen === "desconocido") {
+    return sseText(
+      (primeraCotizacion === null
+        ? "Te ayudo a identificarlo. ¿En qué año empezaste a cotizar por primera vez a Pensiones Civiles del Estado (no solamente a trabajar)? ¿Tienes años anteriores reconocidos o recuerdas haber cambiado de régimen? Puedes responder «No sé» si no tienes esa información."
+        : primeraCotizacion >= 2014
+          ? `Indicas que empezaste a cotizar en ${primeraCotizacion}. Eso apunta al régimen de cuentas individuales, pero debemos confirmar que no existan periodos anteriores reconocidos ni algún cambio de régimen. ¿Tienes cotizaciones a Pensiones Civiles anteriores a 2014? Si no, puedes seleccionar «2. Cuentas individuales».`
+          : `Indicas que cotizabas desde ${primeraCotizacion}, antes de 2014. Podrías estar bajo reglas transitorias, pero hay que confirmar si permaneciste en ellas o migraste a cuentas individuales. ¿Sabes si cambiaste de régimen? Puedes elegir «1. Régimen anterior» si te consta, o solicitar revisión en Pensiones Civiles.`
+      ) + pie,
+    );
+  }
+
+  if (primeraCotizacion === null) {
+    return sseText(
+      `Seleccionaste ${regimen === "transitorio" ? "régimen anterior o transitorio" : "cuentas individuales"}. ¿En qué año empezaste a COTIZAR por primera vez a Pensiones Civiles del Estado? Aclara si tienes periodos anteriores reconocidos o si cambiaste de régimen. No necesito tu fecha exacta de nacimiento todavía.` + pie,
+    );
+  }
+
+  if (regimen === "transitorio") {
+    if (primeraCotizacion >= 2014) {
+      return sseText(
+        `Elegiste el régimen anterior, pero señalas que comenzaste a cotizar en ${primeraCotizacion}. El artículo decimotercero transitorio se refiere a quienes ya cotizaban cuando entró en vigor la ley de 2014. ¿Tienes cotizaciones anteriores reconocidas por Pensiones Civiles o un documento que confirme ese régimen? No sería correcto aplicar la tabla de jubilación anterior sin comprobarlo.` + pie,
+      );
+    }
+    return sseText(
+      `Si cotizabas a Pensiones Civiles desde ${primeraCotizacion}, es posible que te correspondan disposiciones transitorias. Antes de calcular, debemos comprobar que permaneces en ellas y si migraste o no al sistema de cuentas individuales.\n\n` +
+      "El artículo decimotercero transitorio contempla 30 años de servicio para Masculino y 28 para Femenino, además de edades por año de jubilación y condiciones adicionales. No basta con sumar años.\n\n" +
+      "Para continuar: ¿permaneciste en el régimen anterior? ¿Qué opción establece tu documentación para la tabla: Masculino o Femenino? ¿Cuántos años de servicio te reconoce Pensiones Civiles?" +
+      "\n\nReferencia para verificar: Ley de Pensiones Civiles del Estado de Chihuahua, artículo decimotercero transitorio." + pie,
+    );
+  }
+
+  // Cuentas individuales: no usar la tabla de edades transitoria ni calcular
+  // una fecha exacta sin verificar el factor legal y cotizaciones efectivas.
+  if (primeraCotizacion < 2014) {
+    return sseText(
+      `Elegiste cuentas individuales, pero señalas cotizaciones desde ${primeraCotizacion}. Eso puede ocurrir si hubo una migración, que debemos verificar. ¿Tienes confirmación de ese cambio? No aplicaré ninguna tabla hasta aclararlo.` + pie,
+    );
+  }
+  const anio35 = primeraCotizacion + 35;
+  return sseText(
+    `Conforme a los datos que proporcionas, comenzaste a cotizar a Pensiones Civiles en ${primeraCotizacion} y seleccionaste el régimen de cuentas individuales, pendiente de confirmación oficial.\n\n` +
+    `Si las cotizaciones han sido ininterrumpidas y se reconocen desde ese año, 35 años de cotización se completarían aproximadamente en ${anio35}. Esto NO significa que tu fecha de jubilación sea ${anio35}.\n\n` +
+    "De acuerdo con la versión consultada de la Ley de Pensiones Civiles, el artículo 33 contempla 35 años de cotización y la edad correspondiente al factor 85; el artículo 35 regula otra modalidad por antigüedad, con requisitos diferentes. La tabla del simulador histórico de 2014 NO se aplica automáticamente a cuentas individuales.\n\n" +
+    "Para continuar necesito confirmar: ¿has cotizado sin interrupciones desde ese año? ¿Tienes periodos de cotización anteriores reconocidos? Con esa información podremos explicar qué requisitos faltan, pero no prometer una fecha exacta sin validar el factor legal.\n\n" +
+    "Referencia para verificar: Ley de Pensiones Civiles del Estado de Chihuahua, artículos 5, 33 y 35." + pie,
+  );
+}
+
 export default {
   async fetch(
     request: Request,
@@ -137,30 +260,14 @@ async function handleChatRequest(request: Request, env: Env): Promise<Response> 
     }
 
     const conversationText = history.map((msg) => msg.content).join("\n");
-    const retirementTopic = /jubil|simulador\s+(?:de\s+)?retiro|tiempo\s+para\s+retirarme/i.test(
+    const retirementTopic = /jubil|pensionar(?:me|se)?|pensi[oó]n por (?:antig[uü]edad|jubilaci[oó]n)|simulador\s+(?:de\s+)?retiro|tiempo\s+para\s+retirarme/i.test(
       conversationText,
     );
 
-    // Para la primera pregunta de jubilación, la orientación inicial es
-    // determinista: evitamos el rechazo imprevisto de un modelo generativo.
-    const firstRetirementQuestion =
-      userMessages.length === 1 &&
-      retirementTopic &&
-      /cu[aá]nto|cu[aá]ndo|falta|simulador|fecha|puedo\s+jubilar/i.test(question) &&
-      !/ingres[éeí]\s+(?:en\s+)?\d{4}|\d{1,2}\s+a[nñ]os|\d{1,2}\/\d{1,2}\/\d{4}/i.test(question);
-
-    if (firstRetirementQuestion) {
-      return sseText(
-        "Sí, puedo ayudarte con una estimación orientativa de jubilación. " +
-          "Para revisar el simulador histórico de 2014, dime: " +
-          "1) ¿en qué año ingresaste al servicio?, " +
-          "2) ¿qué edad tenías al 31 de diciembre de 2014? y " +
-          "3) ¿qué opción corresponde a tu caso en ese simulador: Masculino o Femenino? " +
-          "No necesito tu CURP ni otros datos identificativos. " +
-          "Importante: la fecha oficial depende del régimen aplicable, " +
-          "la antigüedad y las aportaciones reconocidas; además, la hoja " +
-          "de 2014 necesita verificarse antes de utilizar sus fórmulas.",
-      );
+    // Módulo de jubilaciones: orientación por régimen en respuestas
+    // reproducibles. No deja al modelo inventar fechas a partir de Excel.
+    if (retirementTopic && !otraConsultaNoRelacionada(question)) {
+      return orientarJubilacion(userMessages);
     }
 
     // Conservamos el tema inicial al buscar respuestas cortas de seguimiento
