@@ -9,11 +9,11 @@ const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const newChatButton = document.getElementById("new-chat-button");
 const typingIndicator = document.getElementById("typing-indicator");
+const quickPrompts = document.getElementById("quick-prompts");
 
 const WELCOME_MESSAGE =
   "¡Hola! Soy RENACE IA, tu Asistente de Orientación Sindical SNTE42. " +
-  "Puedes consultarme sobre Prestaciones, Derechos Laborales, Licencias, Trámites y Pensiones Civiles del Estado de Chihuahua. " +
-  "Mis respuestas son orientativas; cuando tenga fuentes documentales disponibles, las mencionaré.";
+  "Puedes consultarme sobre Prestaciones, Derechos Laborales, Licencias, Trámites y Pensiones Civiles del Estado de Chihuahua.";
 
 let chatHistory = [];
 let isProcessing = false;
@@ -53,10 +53,13 @@ function clearConversation({ focus = true } = {}) {
 
   chatHistory = [];
   chatMessages.replaceChildren();
+  quickPrompts.hidden = false;
   userInput.value = "";
   userInput.style.height = "auto";
   setProcessing(false);
   addMessageToChat("assistant", WELCOME_MESSAGE);
+  // Mostrar desde el inicio el mensaje de bienvenida, incluso en pantallas pequeñas.
+  chatMessages.scrollTop = 0;
   if (focus) userInput.focus();
 }
 
@@ -104,6 +107,7 @@ async function sendMessage() {
   userInput.value = "";
   userInput.style.height = "auto";
   chatHistory.push({ role: "user", content: message });
+  quickPrompts.hidden = true;
   chatHistory = chatHistory.slice(-8);
 
   let assistantTextEl = null;
@@ -191,6 +195,16 @@ userInput.addEventListener("keydown", (event) => {
 });
 sendButton.addEventListener("click", sendMessage);
 newChatButton.addEventListener("click", () => clearConversation());
+
+// Las sugerencias solo completan el cuadro: no envían consultas automáticamente.
+document.querySelectorAll(".prompt-chip").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (isProcessing) return;
+    userInput.value = button.dataset.question || "";
+    userInput.dispatchEvent(new Event("input"));
+    userInput.focus();
+  });
+});
 
 // Al regresar a una página recuperada de la caché de navegación, limpiar el chat.
 window.addEventListener("pageshow", (event) => {
