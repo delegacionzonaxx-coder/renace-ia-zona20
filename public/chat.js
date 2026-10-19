@@ -11,8 +11,8 @@ const newChatButton = document.getElementById("new-chat-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
 const WELCOME_MESSAGE =
-  "¡Hola! Soy RENACE IA, tu asistente de orientación sindical de la Zona Escolar 20, SNTE Sección 42. " +
-  "Puedes consultarme sobre prestaciones, derechos laborales, licencias, trámites y Pensiones Civiles del Estado de Chihuahua. " +
+  "¡Hola! Soy RENACE IA, tu Asistente de Orientación Sindical SNTE42. " +
+  "Puedes consultarme sobre Prestaciones, Derechos Laborales, Licencias, Trámites y Pensiones Civiles del Estado de Chihuahua. " +
   "Mis respuestas son orientativas; cuando tenga fuentes documentales disponibles, las mencionaré.";
 
 let chatHistory = [];
