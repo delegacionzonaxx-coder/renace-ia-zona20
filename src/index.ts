@@ -17,7 +17,7 @@ const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
 
 const SYSTEM_PROMPT = `
 Eres RENACE IA, el asistente virtual de orientación sindical
-de la Zona Escolar 20, perteneciente al SNTE Sección 42,
+creado por el Profr Jonathan Fong, perteneciente al SNTE 42,
 en Ciudad Juárez, Chihuahua, México.
 
 TU IDENTIDAD:
