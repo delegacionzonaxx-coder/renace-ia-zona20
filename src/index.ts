@@ -173,8 +173,7 @@ function flujoSimulador(preguntas: string[]): Response | null {
   const regimen = seleccionarRegimen(despues[indiceRegimen]);
   if (regimen === "individual") {
     return responder(
-      "Este simulador de Excel solo funciona para el régimen anterior. " +
-      "No realizaré este cálculo para cuentas individuales."
+      "El simulador solo es válido para trabajadores del régimen anterior, cuentas individuales debe revisar la Ley de PCE actual."
     );
   }
 
