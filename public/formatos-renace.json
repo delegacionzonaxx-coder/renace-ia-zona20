@@ -1,0 +1,92 @@
+{
+  "nombre": "RENACE IA | Catálogo de formatos verificados",
+  "revision_enlaces": "2026-10-20",
+  "descripcion": "Enlaces a originales de Google Drive. Archivos históricos: validar vigencia antes de presentarlos.",
+  "formatos": [
+    {
+      "id": "permiso_economico",
+      "titulo": "Control de solicitudes de permiso económico",
+      "url": "/formato-control-permisos-economicos.pdf",
+      "categoria": "Permisos y licencias",
+      "nota": "Formato de control; debe acompañar la solicitud autorizada. Alojado temporalmente en RENACE IA."
+    },
+    {
+      "id": "carta_activo",
+      "titulo": "Carta testamentaria — personal activo (SEyD 14-45)",
+      "url": "https://drive.google.com/file/d/1F-3d2VEr4mggyx6pyJBZKWeEA25JTOoE/view",
+      "categoria": "Beneficiarios y seguros"
+    },
+    {
+      "id": "carta_jubilado",
+      "titulo": "Carta de instrucción y testamentaria — jubilados/pensionados",
+      "url": "https://drive.google.com/file/d/1gSTEuRfjsiF1BFFGXdxOC8Ilq-Zak8C8/view",
+      "categoria": "Beneficiarios y seguros"
+    },
+    {
+      "id": "afiliacion_esposo",
+      "titulo": "Solicitud de afiliación de esposo — PCE",
+      "url": "https://drive.google.com/file/d/1hfiXaDqpcEGIMH9QFE1rZwXSywvb-49k/view",
+      "categoria": "Afiliación PCE"
+    },
+    {
+      "id": "afiliacion_concubina",
+      "titulo": "Solicitud de afiliación de concubina — PCE",
+      "url": "https://drive.google.com/file/d/1kmGr3UzfpBO91EOms3kfnlW27gKK_7_G/view",
+      "categoria": "Afiliación PCE"
+    },
+    {
+      "id": "afiliacion_padres",
+      "titulo": "Solicitud de afiliación de madre o padre — PCE",
+      "url": "https://drive.google.com/file/d/1Aq_ymeomHTFkRh07MlwSiX9FWOLop3nW/view",
+      "categoria": "Afiliación PCE"
+    },
+    {
+      "id": "afiliacion_hijo_discapacidad",
+      "titulo": "Afiliación de hijo(a) mayor de 18 con incapacidad — PCE",
+      "url": "https://drive.google.com/file/d/1ZgbB_PfDge7qCRkUJBE-NijvGb-CiEbC/view",
+      "categoria": "Afiliación PCE"
+    },
+    {
+      "id": "reposicion_medicos",
+      "titulo": "Solicitud de reposición de gastos médicos — PCE",
+      "url": "https://drive.google.com/file/d/1_b8B_78k3WMnN8UrnOwbEVsz40JTIRIU/view",
+      "categoria": "Servicio médico PCE"
+    },
+    {
+      "id": "jubilacion_pension",
+      "titulo": "Formato de jubilación y pensión — PCE",
+      "url": "https://drive.google.com/file/d/1fT9fB9dsvO0b12wR8NXjHvS17GZZ1pWa/view",
+      "categoria": "Pensiones"
+    },
+    {
+      "id": "viudez_orfandad",
+      "titulo": "Formato de pensión por viudez y orfandad — PCE",
+      "url": "https://drive.google.com/file/d/1OnJSe7jk-P_BJJgtEkdvaOhZ7Fe6pQtR/view",
+      "categoria": "Pensiones"
+    },
+    {
+      "id": "aportaciones_omitidas",
+      "titulo": "Solicitud de pago de aportaciones omitidas — PCE",
+      "url": "https://drive.google.com/file/d/1kCZ-FW9BqAnf-doaIVk3Ns-LyYzrl9zg/view",
+      "categoria": "Pensiones"
+    },
+    {
+      "id": "devolucion_fondo",
+      "titulo": "Formato de devolución de Fondo Propio — PCE",
+      "url": "https://drive.google.com/file/d/1oIhVKmDvCZLCjglzc5dXGilZTGkQp0p9/view",
+      "categoria": "Pensiones"
+    },
+    {
+      "id": "compatibilidad_estatal",
+      "titulo": "Formato de compatibilidad de empleo estatal",
+      "url": "https://drive.google.com/file/d/1YM7gJwzG2SLAmazKKN0wej8ZSO_DBoIp/view",
+      "categoria": "Trámites laborales"
+    },
+    {
+      "id": "ayuda_funeraria",
+      "titulo": "Solicitud de ayuda para gastos funerarios",
+      "url": "https://drive.google.com/file/d/16u-lSBtUrac-EP6gVk3uP_tmlalr7Jcc/view",
+      "categoria": "Seguros y apoyos"
+    }
+  ]
+}
