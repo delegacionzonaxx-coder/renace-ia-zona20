@@ -60,6 +60,124 @@ function mostrarBienvenidaNuevoIngreso() {
   chatHistory = chatHistory.slice(-8);
 }
 
+
+// RENACE IA: catálogo de formatos con enlaces verificados, sin guardar consultas.
+// Para añadir o cambiar formatos, editar exclusivamente public/formatos-renace.json.
+let catalogoFormatosPromise = null;
+function obtenerCatalogoFormatos() {
+  if (!catalogoFormatosPromise) {
+    catalogoFormatosPromise = fetch("/formatos-renace.json", {
+      cache: "no-store", credentials: "same-origin",
+    }).then((r) => {
+      if (!r.ok) throw new Error("Catálogo no disponible");
+      return r.json();
+    }).then((obj) => Array.isArray(obj.formatos) ? obj.formatos : [])
+      .catch(() => []);
+  }
+  return catalogoFormatosPromise;
+}
+
+function normalizarConsultaFormatos(texto) {
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function identificarFormatosSolicitados(texto) {
+  const t = normalizarConsultaFormatos(texto);
+  const seleccion = [];
+  const agregar = (id) => { if (!seleccion.includes(id)) seleccion.push(id); };
+  const tramite = /\b(formato|solicitud|documento|descarg|requisit|tramita|tramite|gestion|gestionar|solicitar|pedir|como|donde|llenar|afiliar|afiliacion|inscribir|alta|registro|expediente|ayuda|reembolso|reposicion)\b/.test(t)
+    || /\b(?:necesito|quiero|requiero|puedo|quiero|voy a|me urge)\b/.test(t);
+
+  if (/\bpermisos? economicos?\b/.test(t)) agregar("permiso_economico");
+
+  if (/\bcarta testamentaria\b|\bdesignar beneficiari[oa]s?\b|\bnombrar beneficiari[oa]s?\b|\btestamentari[oa]\b/.test(t)) {
+    if (/\bjubilad[oa]s?\b|\bpensionad[oa]s?\b/.test(t)) agregar("carta_jubilado");
+    else agregar("carta_activo");
+  }
+
+  const afiliacion = /\b(?:afili|afiliacion|afiliar|inscribir|incorporar|dar de alta|alta de|alta a|beneficiario|derechohabiente)\b/.test(t)
+    || /\b(?:afiliar|afiliacion|dar de alta|afiliarme|afiliarlo|afiliarla)\b/.test(t)
+    || /\b(?:afiliad[oa]|afiliacion)\b/.test(t);
+  if (afiliacion) {
+    if (/\besposo\b|\bmarido\b/.test(t)) agregar("afiliacion_esposo");
+    if (/\bconcubina\b/.test(t)) agregar("afiliacion_concubina");
+    if (/\b(?:madre|padre|mama|papa|progenitor[ae]s?)\b/.test(t)) agregar("afiliacion_padres");
+    if ((/\b(?:hij[oa]|menor|descendiente)\b/.test(t) || /\bhijos\b/.test(t))
+      && /\b(?:incapacidad|discapacidad|mayor(?:es)? de 18|mayor(?:es)? de edad)\b/.test(t))
+      agregar("afiliacion_hijo_discapacidad");
+  }
+
+  if (/\b(?:reposicion|reembolso|devolucion)\b.{0,55}\b(?:gastos? medicos?|atencion medica|medicamentos?)\b|\bgastos? medicos?\b.{0,55}\b(?:reposicion|reembolso|devolucion)\b/.test(t)) agregar("reposicion_medicos");
+  if (/\b(?:viudez|orfandad|pension de viud[oa]|pension por fallecimiento)\b/.test(t) && tramite) agregar("viudez_orfandad");
+  if (/\b(?:jubilacion|jubilarm[ea]|pension por edad|tramite de pension)\b/.test(t)
+      && tramite && !/\b(?:viudez|orfandad|simulacion|simulador|simular|calcular|calculo)\b/.test(t)) agregar("jubilacion_pension");
+  if (/\baportaciones? omitidas?\b/.test(t)) agregar("aportaciones_omitidas");
+  if (/\b(?:devolucion|reintegro|recuperar)\b.{0,40}\bfondo propio\b|\bfondo propio\b.{0,40}\bdevolucion\b/.test(t)) agregar("devolucion_fondo");
+  if (/\bcompatibilidad\b/.test(t) && /\b(?:empleo|plazas?|horas?|estatal|trabajo|formato|tramite)\b/.test(t)) agregar("compatibilidad_estatal");
+  if (/\b(?:ayuda|solicitud|formato|tramite|reembolso|apoyo)\b.{0,45}\bgastos? funerarios?\b|\bgastos? funerarios?\b.{0,45}\b(?:ayuda|solicitud|formato|tramite|apoyo)\b/.test(t)) agregar("ayuda_funeraria");
+  return seleccion.slice(0, 3);
+}
+
+function esUrlFormatoPermitida(url) {
+  try {
+    const u = new URL(url, window.location.origin);
+    if (u.origin === window.location.origin) {
+      return u.pathname === "/formato-control-permisos-economicos.pdf";
+    }
+    return u.protocol === "https:" && u.hostname === "drive.google.com"
+      && /^\/file\/d\/[a-zA-Z0-9_-]+\/view\/?$/.test(u.pathname);
+  } catch { return false; }
+}
+
+async function mostrarFormatosRelacionados(consulta, parrafoRespuesta, versionSolicitud) {
+  const ids = identificarFormatosSolicitados(consulta);
+  if (!ids.length || !parrafoRespuesta) return;
+  const catalogo = await obtenerCatalogoFormatos();
+  if (versionSolicitud !== requestVersion) return;
+  const formatos = ids.map((id) => catalogo.find((x) => x.id === id))
+    .filter((x) => x && typeof x.titulo === "string"
+      && typeof x.url === "string" && esUrlFormatoPermitida(x.url));
+  if (!formatos.length) return;
+
+  const panel = document.createElement("div");
+  panel.setAttribute("role", "group");
+  panel.setAttribute("aria-label", "Formatos relacionados con esta consulta");
+  panel.style.marginTop = "12px";
+  panel.style.padding = "12px";
+  panel.style.background = "#fff4e7";
+  panel.style.border = "1px solid #efd0a3";
+  panel.style.borderRadius = "10px";
+
+  const encabezado = document.createElement("div");
+  encabezado.textContent = "📄 Formato relacionado para descargar" + (formatos.length === 1 ? "" : "s");
+  encabezado.style.fontWeight = "700";
+  encabezado.style.color = "#854009";
+  encabezado.style.marginBottom = "8px";
+  panel.appendChild(encabezado);
+
+  for (const formato of formatos) {
+    const enlace = document.createElement("a");
+    enlace.href = formato.url;
+    enlace.target = "_blank";
+    enlace.rel = "noopener noreferrer";
+    enlace.textContent = "↗ " + formato.titulo;
+    enlace.style.display = "block";
+    enlace.style.marginBottom = "6px";
+    enlace.style.color = "#8d4307";
+    enlace.style.fontWeight = "600";
+    enlace.style.textDecoration = "underline";
+    panel.appendChild(enlace);
+  }
+  const nota = document.createElement("div");
+  nota.textContent = "Confirma con la institución que el formato sigue vigente antes de presentarlo.";
+  nota.style.fontSize = "12px";
+  nota.style.color = "#65513e";
+  panel.appendChild(nota);
+  parrafoRespuesta.parentElement.appendChild(panel);
+  scrollToBottom();
+}
+
 const WELCOME_MESSAGE =
   "¡Hola! Soy RENACE IA, tu Asistente de Orientación Sindical SNTE42. " +
   "Puedes consultarme sobre Prestaciones, Derechos Laborales, Licencias, Trámites y Pensiones Civiles del Estado de Chihuahua.";
@@ -231,6 +349,8 @@ async function sendMessage() {
       chatHistory.push({ role: "assistant", content: responseText });
       chatHistory = chatHistory.slice(-8);
     }
+    // Añadir enlaces verificables sin confiar en URLs generadas por el modelo.
+    await mostrarFormatosRelacionados(message, assistantTextEl, thisRequest);
   } catch (error) {
     if (thisRequest !== requestVersion || controller.signal.aborted) return;
     const errorText = "No fue posible completar la consulta. Intenta de nuevo. Si la sesión de acceso venció, vuelve a iniciar sesión.";
