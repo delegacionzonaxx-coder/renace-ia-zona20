@@ -11,6 +11,55 @@ const newChatButton = document.getElementById("new-chat-button");
 const typingIndicator = document.getElementById("typing-indicator");
 const quickPrompts = document.getElementById("quick-prompts");
 
+// Archivo estático que debe publicarse en public/ junto a este script.
+const GUIA_NUEVO_INGRESO_URL = "/guia-docentes-nuevo-ingreso.pdf";
+
+function esDocenteDeNuevoIngreso(texto) {
+  const t = texto.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[¿?¡!.,;:]/g, " ").replace(/\s+/g, " ").trim();
+  return /\b(?:soy|somos)\s+(?:un[ao]?\s+)?(?:docente|maestr[oa]|profesor[ao])\s+de\s+nuevo\s+ingreso\b/.test(t)
+    || /\b(?:soy|somos)\s+(?:un[ao]?\s+)?(?:docente|maestr[oa]|profesor[ao])\s+reci[eé]n\s+ingresad[oa]s?\b/.test(t)
+    || /\b(?:acabo|acabamos)\s+de\s+(?:ingresar|entrar)\s+(?:al\s+)?(?:servicio\s+docente|magisterio)\b/.test(t)
+    || /\b(?:guia|paquete|bienvenida)\s+(?:para\s+)?(?:docentes?\s+)?de\s+nuevo\s+ingreso\b/.test(t);
+}
+
+function mostrarBienvenidaNuevoIngreso() {
+  const mensaje =
+    "¡Bienvenido al servicio docente! 🧡\n\n" +
+    "Preparamos una guía con tus primeros pasos: alta en Pensiones Civiles, " +
+    "carta testamentaria, SIMAP, seguros, derechos y pensiones. " +
+    "Puedes consultarme cualquiera de estos temas.";
+
+  // Crear el enlace como elemento DOM, nunca como HTML generado por la IA.
+  const parrafo = addMessageToChat("assistant", mensaje);
+  const enlace = document.createElement("a");
+  enlace.href = GUIA_NUEVO_INGRESO_URL;
+  enlace.target = "_blank";
+  enlace.rel = "noopener noreferrer";
+  enlace.textContent = "📄 Abrir o descargar tu Guía de Bienvenida (PDF)";
+  enlace.setAttribute("aria-label", "Abrir la Guía de Bienvenida para docentes de nuevo ingreso, en formato PDF");
+  enlace.style.display = "inline-block";
+  enlace.style.marginTop = "12px";
+  enlace.style.padding = "10px 14px";
+  enlace.style.borderRadius = "10px";
+  enlace.style.background = "#fff2df";
+  enlace.style.border = "1px solid #f1cb97";
+  enlace.style.color = "#9d4c06";
+  enlace.style.fontWeight = "700";
+  enlace.style.textDecoration = "underline";
+  enlace.style.textUnderlineOffset = "3px";
+  parrafo.parentElement.appendChild(enlace);
+  scrollToBottom();
+
+  // El historial continúa siendo temporal en memoria; nunca se guarda.
+  chatHistory.push({
+    role: "assistant",
+    content: mensaje + "\nGuía de Bienvenida (PDF): " + GUIA_NUEVO_INGRESO_URL,
+  });
+  chatHistory = chatHistory.slice(-8);
+}
+
 const WELCOME_MESSAGE =
   "¡Hola! Soy RENACE IA, tu Asistente de Orientación Sindical SNTE42. " +
   "Puedes consultarme sobre Prestaciones, Derechos Laborales, Licencias, Trámites y Pensiones Civiles del Estado de Chihuahua.";
@@ -97,6 +146,19 @@ function extractText(sseData) {
 async function sendMessage() {
   const message = userInput.value.trim();
   if (!message || isProcessing) return;
+
+  // Atajo directo y determinista: no consulta IA ni cambia el simulador.
+  if (esDocenteDeNuevoIngreso(message)) {
+    addMessageToChat("user", message);
+    userInput.value = "";
+    userInput.style.height = "auto";
+    quickPrompts.hidden = true;
+    chatHistory.push({ role: "user", content: message });
+    chatHistory = chatHistory.slice(-8);
+    mostrarBienvenidaNuevoIngreso();
+    userInput.focus();
+    return;
+  }
 
   const thisRequest = ++requestVersion;
   const controller = new AbortController();
