@@ -22,6 +22,9 @@ con apoyo en documentos recuperados, citando los documentos utilizados.
 Nunca inventes fuentes, montos o derechos. No solicites CURP, RFC,
 números de empleado, domicilios, contraseñas ni documentación personal.
 No confundas beneficios sindicales con los de Pensiones Civiles.
+Cuando exista discrepancia sobre permisos económicos, da prioridad al
+oficio 0167/2023 (3 permisos por ciclo escolar de hasta 3 días cada uno),
+no a la regla antigua de 3 días anuales del Manual del dirigente sindical.
 El simulador de jubilación del régimen anterior es una función independiente
 que no se calcula a través de este modelo ni mediante otros documentos.
 `;
@@ -224,6 +227,35 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
+/**
+ * Actualización de permisos económicos conforme al oficio 0167/2023.
+ * Respuesta controlada para no reutilizar la información superada del
+ * "Manual del dirigente sindical" (tres días en total al año).
+ * El formato de control acompaña a la solicitud autorizada.
+ */
+const RESPUESTA_PERMISOS_ECONOMICOS = [
+  "Permisos económicos para personal de base (subsistema estatal de Chihuahua):",
+  "• Se pueden solicitar hasta 3 permisos por ciclo escolar, de hasta 3 días consecutivos dentro de una misma semana cada uno, con goce de sueldo (máximo 9 días en total).",
+  "• Las 3 ocasiones deben estar separadas entre sí por al menos 30 días naturales. Cada permiso no se fracciona; si solicitas menos de 3 días, cuenta como una ocasión.",
+  "• Presenta la solicitud oficial y el formato de control a tu autoridad inmediata superior, por regla general con al menos 2 días hábiles de anticipación. Las situaciones de fuerza mayor no eliminan la necesidad de autorización.",
+  "• La autoridad debe comunicar por escrito la autorización o negativa fundamentada en 24 horas tras recibir la solicitud y garantizar la continuidad del servicio educativo.",
+  "• No procede en días hábiles inmediatamente anteriores o posteriores a asuetos; durante las 2 semanas anteriores o posteriores a vacaciones o receso; ni en días de Consejo Técnico Escolar.",
+  "Fuente: Oficio 0167/2023 (permisos económicos) y formato «Control de solicitudes de permiso económico», de Recursos Humanos del ámbito Magisterio.",
+].join("\n");
+
+function consultaSobrePermisoEconomico(texto: string): boolean {
+  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, " ").replace(/\s+/g, " ").trim();
+  // Excluir otros permisos (por ejemplo, licencias sin goce de sueldo).
+  if (/\bsin goce de sueldo\b/.test(t)) return false;
+  return (
+    /\b(?:permisos?|licencias?)\s+(?:de\s+)?economic[oa]s?\b/.test(t) ||
+    /\bdias?\s+economic[oa]s?\b/.test(t) ||
+    /\b(?:permisos?|licencias?)\s+(?:por|para)\s+(?:asuntos|motivos)\s+personales\b/.test(t) ||
+    /\boficio\s*0?167(?:\s*\/\s*2023)?\b/.test(t) ||
+    /\b(?:3|tres)\s+permisos?\s+(?:de\s+)?(?:3|tres)\s+dias?\b/.test(t)
+  );
+}
+
 async function handleChatRequest(request: Request, env: Env): Promise<Response> {
   try {
     const body = (await request.json()) as { messages?: ChatMessage[] };
@@ -234,6 +266,12 @@ async function handleChatRequest(request: Request, env: Env): Promise<Response> 
     const pregunta = userMessages[userMessages.length - 1]?.content?.trim();
     if (!pregunta || pregunta.length > 3000) {
       return Response.json({ error: "Escribe una consulta válida." }, { status: 400 });
+    }
+
+    // Fuente posterior y específica: oficio 0167/2023. Evitar que
+    // el manual anterior dé una respuesta de solo 3 días en el año.
+    if (consultaSobrePermisoEconomico(pregunta)) {
+      return responder(RESPUESTA_PERMISOS_ECONOMICOS);
     }
 
     // El simulador jamás invoca AI Search ni utiliza otros documentos.
